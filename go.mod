@@ -1,6 +1,6 @@
 module github.com/pterodactyl/wings
 
-go 1.21
+go 1.22.5
 
 toolchain go1.22.5
 
