@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,12 +13,13 @@ import (
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	"github.com/gammazero/workerpool"
+	"github.com/goccy/go-json"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/environment/docker"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/server/filesystem"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
+	"github.com/SneakyHub/wings/environment/docker"
+	"github.com/SneakyHub/wings/remote"
+	"github.com/SneakyHub/wings/server/filesystem"
 )
 
 type Manager struct {

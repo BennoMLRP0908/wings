@@ -2,29 +2,29 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pterodactyl/wings/internal/models"
+	"github.com/SneakyHub/wings/internal/models"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
 	"github.com/gbrlsnchs/jwt/v3"
 	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"github.com/pterodactyl/wings/system"
+	"github.com/SneakyHub/wings/system"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/environment/docker"
-	"github.com/pterodactyl/wings/router/tokens"
-	"github.com/pterodactyl/wings/server"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
+	"github.com/SneakyHub/wings/environment/docker"
+	"github.com/SneakyHub/wings/router/tokens"
+	"github.com/SneakyHub/wings/server"
 )
 
 const (
@@ -310,7 +310,7 @@ func (h *Handler) HandleInbound(ctx context.Context, m Message) error {
 			// instead of authenticating for the first time.
 			if !newConnection {
 				// This prevents duplicate status messages as outlined in
-				// https://github.com/pterodactyl/panel/issues/2077
+				// https://github.com/sneakypanel/panel/issues/2077
 				return nil
 			}
 

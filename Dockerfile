@@ -1,14 +1,14 @@
 # Stage 1 (Build)
-FROM golang:1.22.6-alpine AS builder
+FROM golang:1.21.9-alpine AS builder
 
 ARG VERSION
-RUN apk add --update --no-cache git make mailcap
+RUN apk add --update --no-cache git make
 WORKDIR /app/
 COPY go.mod go.sum /app/
 RUN go mod download
 COPY . /app/
 RUN CGO_ENABLED=0 go build \
-    -ldflags="-s -w -X github.com/pterodactyl/wings/system.Version=$VERSION" \
+    -ldflags="-s -w -X github.com/SneakyHub/wings/system.Version=$VERSION" \
     -v \
     -trimpath \
     -o wings \
@@ -18,11 +18,8 @@ RUN echo "ID=\"distroless\"" > /etc/os-release
 # Stage 2 (Final)
 FROM gcr.io/distroless/static:latest
 COPY --from=builder /etc/os-release /etc/os-release
-COPY --from=builder /etc/mime.types /etc/mime.types
 
 COPY --from=builder /app/wings /usr/bin/
+CMD [ "/usr/bin/wings", "--config", "/etc/sneakypanel/config.yml" ]
 
-ENTRYPOINT ["/usr/bin/wings"]
-CMD ["--config", "/etc/pterodactyl/config.yml"]
-
-EXPOSE 8080 2022
+EXPOSE 8080

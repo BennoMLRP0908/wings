@@ -3,13 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"emperror.dev/errors"
 	"github.com/google/uuid"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
 )
 
 type PowerAction string
@@ -160,7 +161,7 @@ func (s *Server) HandlePowerAction(action PowerAction, waitSeconds ...int) error
 
 		return s.Environment.Start(s.Context())
 	case PowerActionTerminate:
-		return s.Environment.Terminate(s.Context(), "SIGKILL")
+		return s.Environment.Terminate(s.Context(), os.Kill)
 	}
 
 	return errors.New("attempting to handle unknown power action")

@@ -2,7 +2,6 @@ package downloader
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -15,9 +14,10 @@ import (
 	"time"
 
 	"emperror.dev/errors"
+	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 
-	"github.com/pterodactyl/wings/server"
+	"github.com/SneakyHub/wings/server"
 )
 
 var client *http.Client
@@ -189,7 +189,7 @@ func (dl *Download) Execute() error {
 		return errors.WrapIf(err, "downloader: failed to create request")
 	}
 
-	req.Header.Set("User-Agent", "Pterodactyl Panel (https://pterodactyl.io)")
+	req.Header.Set("User-Agent", "sneakypanel Panel (https://sneakypanel.io)")
 	res, err := client.Do(req)
 	if err != nil {
 		return ErrDownloadFailed

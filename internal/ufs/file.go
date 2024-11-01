@@ -146,7 +146,6 @@ const (
 	ModePerm = iofs.ModePerm
 )
 
-// Re-using the same names as Go's official `unix` and `os` package do.
 const (
 	// O_RDONLY opens the file read-only.
 	O_RDONLY = unix.O_RDONLY

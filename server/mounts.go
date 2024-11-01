@@ -6,8 +6,8 @@ import (
 
 	"github.com/apex/log"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
 )
 
 // To avoid confusion when working with mounts, assume that a server.Mount has not been properly
@@ -27,21 +27,6 @@ func (s *Server) Mounts() []environment.Mount {
 			Source:   s.Filesystem().Path(),
 			ReadOnly: false,
 		},
-	}
-
-	// Handle mounting a generated `/etc/passwd` if the feature is enabled.
-	if passwd := config.Get().System.Passwd; passwd.Enable {
-		s.Log().WithFields(log.Fields{"source_path": passwd.Directory}).Info("mouting generated /etc/{group,passwd} to workaround UID/GID issues")
-		m = append(m, environment.Mount{
-			Source:   filepath.Join(passwd.Directory, "group"),
-			Target:   "/etc/group",
-			ReadOnly: true,
-		})
-		m = append(m, environment.Mount{
-			Source:   filepath.Join(passwd.Directory, "passwd"),
-			Target:   "/etc/passwd",
-			ReadOnly: true,
-		})
 	}
 
 	// Also include any of this server's custom mounts when returning them.
@@ -71,12 +56,14 @@ func (s *Server) customMounts() []environment.Mount {
 			if !strings.HasPrefix(source, filepath.Clean(allowed)) {
 				continue
 			}
+
 			mounted = true
 			mounts = append(mounts, environment.Mount{
 				Source:   source,
 				Target:   target,
 				ReadOnly: m.ReadOnly,
 			})
+
 			break
 		}
 

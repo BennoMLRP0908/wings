@@ -2,16 +2,16 @@ package websocket
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
 	"emperror.dev/errors"
+	"github.com/goccy/go-json"
 
-	"github.com/pterodactyl/wings/events"
-	"github.com/pterodactyl/wings/system"
+	"github.com/SneakyHub/wings/events"
+	"github.com/SneakyHub/wings/system"
 
-	"github.com/pterodactyl/wings/server"
+	"github.com/SneakyHub/wings/server"
 )
 
 // RegisterListenerEvents will setup the server event listeners and expiration
@@ -23,7 +23,7 @@ import (
 // Docker events being output to the socket will fail when it hasn't been
 // properly initialized yet.
 //
-// @see https://github.com/pterodactyl/panel/issues/3295
+// @see https://github.com/sneakypanel/panel/issues/3295
 func (h *Handler) registerListenerEvents(ctx context.Context) {
 	h.Logger().Debug("registering event listeners for connection")
 

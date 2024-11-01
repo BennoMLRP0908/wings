@@ -2,15 +2,15 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"math"
 	"time"
 
 	"emperror.dev/errors"
 	"github.com/docker/docker/api/types"
+	"github.com/goccy/go-json"
 
-	"github.com/pterodactyl/wings/environment"
+	"github.com/SneakyHub/wings/environment"
 )
 
 // Uptime returns the current uptime of the container in milliseconds. If the

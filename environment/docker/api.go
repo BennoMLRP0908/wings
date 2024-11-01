@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"reflect"
@@ -14,8 +13,9 @@ import (
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
+	"github.com/goccy/go-json"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/SneakyHub/wings/config"
 )
 
 var (

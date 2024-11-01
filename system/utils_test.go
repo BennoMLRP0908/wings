@@ -1,7 +1,6 @@
 package system
 
 import (
-	"encoding/json"
 	"math/rand"
 	"strings"
 	"sync"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	. "github.com/franela/goblin"
+	"github.com/goccy/go-json"
 )
 
 func Test_Utils(t *testing.T) {

@@ -17,9 +17,9 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/system"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
+	"github.com/SneakyHub/wings/system"
 )
 
 var ErrNotAttached = errors.Sentinel("not attached to instance")
@@ -49,7 +49,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 		return nil
 	}
 
-	opts := container.AttachOptions{
+	opts := types.ContainerAttachOptions{
 		Stdin:  true,
 		Stdout: true,
 		Stderr: true,
@@ -103,7 +103,7 @@ func (e *Environment) Attach(ctx context.Context) error {
 // container. This allows memory, cpu, and IO limitations to be adjusted on the
 // fly for individual instances.
 func (e *Environment) InSituUpdate() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	if _, err := e.ContainerInspect(ctx); err != nil {
@@ -155,7 +155,7 @@ func (e *Environment) Create() error {
 	a := e.Configuration.Allocations()
 	evs := e.Configuration.EnvironmentVariables()
 	for i, v := range evs {
-		// Convert 127.0.0.1 to the pterodactyl0 network interface if the environment is Docker
+		// Convert 127.0.0.1 to the sneakypanel0 network interface if the environment is Docker
 		// so that the server operates as expected.
 		if v == "SERVER_IP=127.0.0.1" {
 			evs[i] = "SERVER_IP=" + cfg.Docker.Network.Interface
@@ -169,7 +169,7 @@ func (e *Environment) Create() error {
 	for key := range confLabels {
 		labels[key] = confLabels[key]
 	}
-	labels["Service"] = "Pterodactyl"
+	labels["Service"] = "sneakypanel"
 	labels["ContainerType"] = "server_process"
 
 	conf := &container.Config{
@@ -270,7 +270,7 @@ func (e *Environment) Destroy() error {
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
 
-	err := e.client.ContainerRemove(context.Background(), e.Id, container.RemoveOptions{
+	err := e.client.ContainerRemove(context.Background(), e.Id, types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   false,
 		Force:         true,
@@ -281,7 +281,7 @@ func (e *Environment) Destroy() error {
 	// Don't trigger a destroy failure if we try to delete a container that does not
 	// exist on the system. We're just a step ahead of ourselves in that case.
 	//
-	// @see https://github.com/pterodactyl/panel/issues/2001
+	// @see https://github.com/sneakypanel/panel/issues/2001
 	if err != nil && client.IsErrNotFound(err) {
 		return nil
 	}
@@ -316,7 +316,7 @@ func (e *Environment) SendCommand(c string) error {
 // is running or not, it will simply try to read the last X bytes of the file
 // and return them.
 func (e *Environment) Readlog(lines int) ([]string, error) {
-	r, err := e.client.ContainerLogs(context.Background(), e.Id, container.LogsOptions{
+	r, err := e.client.ContainerLogs(context.Background(), e.Id, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       strconv.Itoa(lines),
@@ -355,7 +355,7 @@ func (e *Environment) ensureImageExists(image string) error {
 	// Give it up to 15 minutes to pull the image. I think this should cover 99.8% of cases where an
 	// image pull might fail. I can't imagine it will ever take more than 15 minutes to fully pull
 	// an image. Let me know when I am inevitably wrong here...
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*15)
 	defer cancel()
 
 	// Get a registry auth configuration from the config.

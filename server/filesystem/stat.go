@@ -8,7 +8,7 @@ import (
 
 	"github.com/gabriel-vasile/mimetype"
 
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/SneakyHub/wings/internal/ufs"
 )
 
 type Stat struct {
@@ -38,7 +38,7 @@ func (s *Stat) MarshalJSON() ([]byte, error) {
 		Size:      s.Size(),
 		Directory: s.IsDir(),
 		File:      !s.IsDir(),
-		Symlink:   s.Mode().Type()&ufs.ModeSymlink != 0,
+		Symlink:   s.Mode().Perm()&ufs.ModeSymlink != 0,
 		Mime:      s.Mimetype,
 	})
 }

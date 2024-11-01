@@ -119,6 +119,5 @@ func walkDir(fs Filesystem, name string, d DirEntry, walkDirFn WalkDirFunc) erro
 			return err
 		}
 	}
-
 	return nil
 }

@@ -2,9 +2,10 @@ package environment
 
 import (
 	"context"
+	"os"
 	"time"
 
-	"github.com/pterodactyl/wings/events"
+	"github.com/SneakyHub/wings/events"
 )
 
 const (
@@ -71,7 +72,7 @@ type ProcessEnvironment interface {
 
 	// Terminate stops a running server instance using the provided signal. This function
 	// is a no-op if the server is already stopped.
-	Terminate(ctx context.Context, signal string) error
+	Terminate(ctx context.Context, signal os.Signal) error
 
 	// Destroys the environment removing any containers that were created (in Docker
 	// environments at least).

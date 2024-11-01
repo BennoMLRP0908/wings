@@ -4,15 +4,17 @@ import (
 	"context"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"emperror.dev/errors"
 	"github.com/apex/log"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/remote"
+	"github.com/SneakyHub/wings/environment"
+	"github.com/SneakyHub/wings/remote"
 )
 
 // OnBeforeStart run before the container starts and get the process
@@ -25,7 +27,7 @@ import (
 // is running does not result in the server becoming un-bootable.
 func (e *Environment) OnBeforeStart(ctx context.Context) error {
 	// Always destroy and re-create the server container to ensure that synced data from the Panel is used.
-	if err := e.client.ContainerRemove(ctx, e.Id, container.RemoveOptions{RemoveVolumes: true}); err != nil {
+	if err := e.client.ContainerRemove(ctx, e.Id, types.ContainerRemoveOptions{RemoveVolumes: true}); err != nil {
 		if !client.IsErrNotFound(err) {
 			return errors.WrapIf(err, "environment/docker: failed to remove container during pre-boot")
 		}
@@ -69,7 +71,7 @@ func (e *Environment) Start(ctx context.Context) error {
 		// to the next block of code here. This check was inlined here to guard against
 		// a nil-pointer when checking c.State below.
 		//
-		// @see https://github.com/pterodactyl/panel/issues/2000
+		// @see https://github.com/sneakypanel/panel/issues/2000
 		if !client.IsErrNotFound(err) {
 			return errors.WrapIf(err, "environment/docker: failed to inspect container")
 		}
@@ -120,7 +122,7 @@ func (e *Environment) Start(ctx context.Context) error {
 		return errors.WrapIf(err, "environment/docker: failed to attach to container")
 	}
 
-	if err := e.client.ContainerStart(actx, e.Id, container.StartOptions{}); err != nil {
+	if err := e.client.ContainerStart(actx, e.Id, types.ContainerStartOptions{}); err != nil {
 		return errors.WrapIf(err, "environment/docker: failed to start container")
 	}
 
@@ -141,49 +143,42 @@ func (e *Environment) Stop(ctx context.Context) error {
 	s := e.meta.Stop
 	e.mu.RUnlock()
 
+	// A native "stop" as the Type field value will just skip over all of this
+	// logic and end up only executing the container stop command (which may or
+	// may not work as expected).
+	if s.Type == "" || s.Type == remote.ProcessStopSignal {
+		if s.Type == "" {
+			log.WithField("container_id", e.Id).Warn("no stop configuration detected for environment, using termination procedure")
+		}
+
+		signal := os.Kill
+		// Handle a few common cases, otherwise just fall through and just pass along
+		// the os.Kill signal to the process.
+		switch strings.ToUpper(s.Value) {
+		case "SIGABRT":
+			signal = syscall.SIGABRT
+		case "SIGINT":
+			signal = syscall.SIGINT
+		case "SIGTERM":
+			signal = syscall.SIGTERM
+		}
+		return e.Terminate(ctx, signal)
+	}
+
 	// If the process is already offline don't switch it back to stopping. Just leave it how
 	// it is and continue through to the stop handling for the process.
 	if e.st.Load() != environment.ProcessOfflineState {
 		e.SetState(environment.ProcessStoppingState)
 	}
 
-	// Handle signal based actions
-	if s.Type == remote.ProcessStopSignal {
-		log.WithField("signal_value", s.Value).Debug("stopping server using signal")
-
-		// Handle some common signals - Default to SIGKILL
-		signal := "SIGKILL"
-		switch strings.ToUpper(s.Value) {
-		case "SIGABRT":
-			signal = "SIGABRT"
-		case "SIGINT", "C":
-			signal = "SIGINT"
-		case "SIGTERM":
-			signal = "SIGTERM"
-		case "SIGKILL":
-			signal = "SIGKILL"
-		default:
-			log.Info("Unrecognised signal requested, defaulting to SIGKILL")
-		}
-
-		return e.SignalContainer(ctx, signal)
-
-	}
-
-	// Handle command based stops
 	// Only attempt to send the stop command to the instance if we are actually attached to
 	// the instance. If we are not for some reason, just send the container stop event.
 	if e.IsAttached() && s.Type == remote.ProcessStopCommand {
 		return e.SendCommand(s.Value)
 	}
 
-	if s.Type == "" {
-		log.WithField("container_id", e.Id).Warn("no stop configuration detected for environment, using native docker stop")
-	}
-
-	// Fallback to a native docker stop. As we aren't passing a signal to ContainerStop docker will
-	// attempt to stop the container using the default stop signal, SIGTERM, unless
-	// another signal was specified in the Dockerfile
+	// Allow the stop action to run for however long it takes, similar to executing a command
+	// and using a different logic pathway to wait for the container to stop successfully.
 	//
 	// Using a negative timeout here will allow the container to stop gracefully,
 	// rather than forcefully terminating it.  Value is in seconds, but -1 is
@@ -229,7 +224,7 @@ func (e *Environment) WaitForStop(ctx context.Context, duration time.Duration, t
 
 	doTermination := func(s string) error {
 		e.log().WithField("step", s).WithField("duration", duration).Warn("container stop did not complete in time, terminating process...")
-		return e.Terminate(ctx, "SIGKILL")
+		return e.Terminate(ctx, os.Kill)
 	}
 
 	// We pass through the timed context for this stop action so that if one of the
@@ -273,8 +268,8 @@ func (e *Environment) WaitForStop(ctx context.Context, duration time.Duration, t
 	return nil
 }
 
-// Sends the specified signal to the container in an attempt to stop it.
-func (e *Environment) SignalContainer(ctx context.Context, signal string) error {
+// Terminate forcefully terminates the container using the signal provided.
+func (e *Environment) Terminate(ctx context.Context, signal os.Signal) error {
 	c, err := e.ContainerInspect(ctx)
 	if err != nil {
 		// Treat missing containers as an okay error state, means it is obviously
@@ -299,23 +294,10 @@ func (e *Environment) SignalContainer(ctx context.Context, signal string) error 
 
 	// We set it to stopping than offline to prevent crash detection from being triggered.
 	e.SetState(environment.ProcessStoppingState)
-	if err := e.client.ContainerKill(ctx, e.Id, signal); err != nil && !client.IsErrNotFound(err) {
+	sig := strings.TrimSuffix(strings.TrimPrefix(signal.String(), "signal "), "ed")
+	if err := e.client.ContainerKill(ctx, e.Id, sig); err != nil && !client.IsErrNotFound(err) {
 		return errors.WithStack(err)
 	}
-
-	return nil
-}
-
-// Terminate forcefully terminates the container using the signal provided.
-// then sets its state to stopped.
-func (e *Environment) Terminate(ctx context.Context, signal string) error {
-	// Send the signal to the container to kill it
-	if err := e.SignalContainer(ctx, signal); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// We expect Terminate to instantly kill the container
-	// so go ahead and mark it as dead and clean up
 	e.SetState(environment.ProcessOfflineState)
 
 	return nil

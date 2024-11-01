@@ -8,7 +8,7 @@ import (
 	"github.com/apex/log"
 	"github.com/docker/docker/api/types/container"
 
-	"github.com/pterodactyl/wings/config"
+	"github.com/SneakyHub/wings/config"
 )
 
 type Mount struct {
@@ -34,7 +34,7 @@ type Mount struct {
 // Limits is the build settings for a given server that impact docker container
 // creation and resource limits for a server instance.
 type Limits struct {
-	// The total amount of memory in mebibytes that this server is allowed to
+	// The total amount of memory in megabytes that this server is allowed to
 	// use on the host system.
 	MemoryLimit int64 `json:"memory_limit"`
 
@@ -79,7 +79,7 @@ func (l Limits) MemoryOverheadMultiplier() float64 {
 }
 
 func (l Limits) BoundedMemoryLimit() int64 {
-	return int64(math.Round(float64(l.MemoryLimit) * l.MemoryOverheadMultiplier() * 1024 * 1024))
+	return int64(math.Round(float64(l.MemoryLimit) * l.MemoryOverheadMultiplier() * 1_000_000))
 }
 
 // ConvertedSwap returns the amount of swap available as a total in bytes. This
@@ -90,7 +90,7 @@ func (l Limits) ConvertedSwap() int64 {
 		return -1
 	}
 
-	return (l.Swap * 1024 * 1024) + l.BoundedMemoryLimit()
+	return (l.Swap * 1_000_000) + l.BoundedMemoryLimit()
 }
 
 // ProcessLimit returns the process limit for a container. This is currently
@@ -105,7 +105,7 @@ func (l Limits) AsContainerResources() container.Resources {
 	pids := l.ProcessLimit()
 	resources := container.Resources{
 		Memory:            l.BoundedMemoryLimit(),
-		MemoryReservation: l.MemoryLimit * 1024 * 1024,
+		MemoryReservation: l.MemoryLimit * 1_000_000,
 		MemorySwap:        l.ConvertedSwap(),
 		BlkioWeight:       l.IoWeight,
 		OomKillDisable:    &l.OOMDisabled,
@@ -115,7 +115,7 @@ func (l Limits) AsContainerResources() container.Resources {
 	// If the CPU Limit is not set, don't send any of these fields through. Providing
 	// them seems to break some Java services that try to read the available processors.
 	//
-	// @see https://github.com/pterodactyl/panel/issues/3988
+	// @see https://github.com/sneakypanel/panel/issues/3988
 	if l.CpuLimit > 0 {
 		resources.CPUQuota = l.CpuLimit * 1_000
 		resources.CPUPeriod = 100_000

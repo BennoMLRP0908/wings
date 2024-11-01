@@ -17,8 +17,8 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	ignore "github.com/sabhiram/go-gitignore"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/internal/ufs"
 )
 
 type Filesystem struct {
@@ -480,9 +480,9 @@ func (fs *Filesystem) ListDirectory(p string) ([]Stat, error) {
 		case a.IsDir() && b.IsDir():
 			return 0
 		case a.IsDir():
-			return -1
-		default:
 			return 1
+		default:
+			return -1
 		}
 	})
 

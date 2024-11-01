@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/NYTimes/logrotate"
@@ -25,16 +26,16 @@ import (
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/environment"
-	"github.com/pterodactyl/wings/internal/cron"
-	"github.com/pterodactyl/wings/internal/database"
-	"github.com/pterodactyl/wings/loggers/cli"
-	"github.com/pterodactyl/wings/remote"
-	"github.com/pterodactyl/wings/router"
-	"github.com/pterodactyl/wings/server"
-	"github.com/pterodactyl/wings/sftp"
-	"github.com/pterodactyl/wings/system"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/environment"
+	"github.com/SneakyHub/wings/internal/cron"
+	"github.com/SneakyHub/wings/internal/database"
+	"github.com/SneakyHub/wings/loggers/cli"
+	"github.com/SneakyHub/wings/remote"
+	"github.com/SneakyHub/wings/router"
+	"github.com/SneakyHub/wings/server"
+	"github.com/SneakyHub/wings/sftp"
+	"github.com/SneakyHub/wings/system"
 )
 
 var (
@@ -44,7 +45,7 @@ var (
 
 var rootCommand = &cobra.Command{
 	Use:   "wings",
-	Short: "Runs the API server allowing programmatic control of game servers for Pterodactyl Panel.",
+	Short: "Runs the API server allowing programmatic control of game servers for sneakypanel Panel.",
 	PreRun: func(cmd *cobra.Command, args []string) {
 		initConfig()
 		initLogging()
@@ -62,7 +63,7 @@ var versionCommand = &cobra.Command{
 	Use:   "version",
 	Short: "Prints the current executable version and exits.",
 	Run: func(cmd *cobra.Command, _ []string) {
-		fmt.Printf("wings v%s\nCopyright © 2018 - %d Dane Everitt & Contributors\n", system.Version, time.Now().Year())
+		fmt.Printf("wings v%s\nCopyright © 2024 - %d Sneaky & Contributors\n", system.Version, time.Now().Year())
 	},
 }
 
@@ -106,14 +107,11 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 	}
 	log.WithField("timezone", config.Get().System.Timezone).Info("configured wings with system timezone")
 	if err := config.ConfigureDirectories(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure system directories for pterodactyl")
+		log.WithField("error", err).Fatal("failed to configure system directories for sneakypanel")
 		return
 	}
-	if err := config.EnsurePterodactylUser(); err != nil {
-		log.WithField("error", err).Fatal("failed to create pterodactyl system user")
-	}
-	if err := config.ConfigurePasswd(); err != nil {
-		log.WithField("error", err).Fatal("failed to configure container passwd file")
+	if err := config.EnsuresneakypanelUser(); err != nil {
+		log.WithField("error", err).Fatal("failed to create sneakypanel system user")
 	}
 	log.WithFields(log.Fields{
 		"username": config.Get().System.Username,
@@ -203,8 +201,8 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 			// machine is rebooted. It is much better for us to just have a single failed
 			// server instance than an entire offline node.
 			//
-			// @see https://github.com/pterodactyl/panel/issues/2475
-			// @see https://github.com/pterodactyl/panel/issues/3358
+			// @see https://github.com/sneakypanel/panel/issues/2475
+			// @see https://github.com/sneakypanel/panel/issues/3358
 			ctx, cancel := context.WithTimeout(cmd.Context(), time.Second*30)
 			defer cancel()
 
@@ -381,14 +379,13 @@ func rootCmdRun(cmd *cobra.Command, _ []string) {
 // Reads the configuration from the disk and then sets up the global singleton
 // with all the configuration values.
 func initConfig() {
-	if !filepath.IsAbs(configPath) {
-		d, err := filepath.Abs(configPath)
+	if !strings.HasPrefix(configPath, "/") {
+		d, err := os.Getwd()
 		if err != nil {
-			log2.Fatalf("cmd/root: failed to get path to config file: %s", err)
+			log2.Fatalf("cmd/root: could not determine directory: %s", err)
 		}
-		configPath = d
+		configPath = path.Clean(path.Join(d, configPath))
 	}
-
 	err := config.FromFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -425,17 +422,17 @@ func initLogging() {
 func printLogo() {
 	fmt.Printf(colorstring.Color(`
                      ____
-__ [blue][bold]Pterodactyl[reset] _____/___/_______ _______ ______
+__ [blue][bold]SneakyPanel[reset] _____/___/_______ _______ ______
 \_____\    \/\/    /   /       /  __   /   ___/
    \___\          /   /   /   /  /_/  /___   /
         \___/\___/___/___/___/___    /______/
                             /_______/ [bold]%s[reset]
 
-Copyright © 2018 - %d Dane Everitt & Contributors
+Copyright © 2023 - %d Sneaky & Contributors
 
-Website:  https://pterodactyl.io
- Source:  https://github.com/pterodactyl/wings
-License:  https://github.com/pterodactyl/wings/blob/develop/LICENSE
+Website:  https://sneakypanel.com
+ Source:  https://github.com/SneakyHub/wings
+License:  https://github.com/SneakyHub/wings/blob/develop/LICENSE
 
 This software is made available under the terms of the MIT license.
 The above copyright notice and this permission notice shall be included
@@ -443,18 +440,18 @@ in all copies or substantial portions of the Software.%s`), system.Version, time
 }
 
 func exitWithConfigurationNotice() {
-	fmt.Printf(colorstring.Color(`
+	fmt.Print(colorstring.Color(`
 [_red_][white][bold]Error: Configuration File Not Found[reset]
 
 Wings was not able to locate your configuration file, and therefore is not
 able to complete its boot process. Please ensure you have copied your instance
 configuration file into the default location below.
 
-Default Location: %s
+Default Location: /etc/sneakypanel/config.yml
 
 [yellow]This is not a bug with this software. Please do not make a bug report
 for this issue, it will be closed.[reset]
 
-`), config.DefaultLocation)
+`))
 	os.Exit(1)
 }

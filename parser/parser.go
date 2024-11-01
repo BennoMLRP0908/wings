@@ -3,7 +3,6 @@ package parser
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"io"
 	"strconv"
 	"strings"
@@ -12,13 +11,14 @@ import (
 	"github.com/apex/log"
 	"github.com/beevik/etree"
 	"github.com/buger/jsonparser"
+	"github.com/goccy/go-json"
 	"github.com/icza/dyno"
 	"github.com/magiconair/properties"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v3"
 
-	"github.com/pterodactyl/wings/config"
-	"github.com/pterodactyl/wings/internal/ufs"
+	"github.com/SneakyHub/wings/config"
+	"github.com/SneakyHub/wings/internal/ufs"
 )
 
 // The file parsing options that are available for a server configuration file.
@@ -191,7 +191,7 @@ func (cfr *ConfigurationFileReplacement) UnmarshalJSON(data []byte) error {
 // Parse parses a given configuration file and updates all the values within
 // as defined in the API response from the Panel.
 func (f *ConfigurationFile) Parse(file ufs.File) error {
-	// log.WithField("path", path).WithField("parser", f.Parser.String()).Debug("parsing server configuration file")
+	//log.WithField("path", path).WithField("parser", f.Parser.String()).Debug("parsing server configuration file")
 
 	// What the fuck is going on here?
 	if mb, err := json.Marshal(config.Get()); err != nil {
@@ -516,8 +516,8 @@ func (f *ConfigurationFile) parseTextFile(file ufs.File) error {
 // the value was escaped or not to begin with before setting it, which I suppose
 // can work but jesus that is going to be some annoyingly complicated logic?
 //
-// @see https://github.com/pterodactyl/panel/issues/2308 (original)
-// @see https://github.com/pterodactyl/panel/issues/3009 ("bug" introduced as result)
+// @see https://github.com/sneakypanel/panel/issues/2308 (original)
+// @see https://github.com/sneakypanel/panel/issues/3009 ("bug" introduced as result)
 func (f *ConfigurationFile) parsePropertiesFile(file ufs.File) error {
 	b, err := io.ReadAll(file)
 	if err != nil {
